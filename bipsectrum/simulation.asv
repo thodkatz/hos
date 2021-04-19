@@ -6,23 +6,27 @@ display = 0;
 N = 8192;
 samples = genSamples(N, display);
 
-maxLag = 128;
-M = 256;
-
 % repeat for different M = 512 and M = 128
-hosAnalysis(samples, 128, maxLag, 1);
-hosAnalysis(samples, 256, maxLag, 1);
-hosAnalysis(samples, 512, maxLag, 1);
+hosAnalysis(samples, 128, display);
+%hosAnalysis(samples, 256, 1);
+%hosAnalysis(samples, 512, 1);
 
 % repeat for 50 realizations and get the mean
+M = 256;
+maxLag = 128;
 numIter = 10;
 psd = zeros(numIter, 2*maxLag + 1);
 bispPa = ones(numIter, 2*maxLag + 1, 2*maxLag + 1);
 bispNo = ones(numIter, 2*maxLag + 1, 2*maxLag + 1);
 for k = 1:numIter
     samples = genSamples(N, display);
-    [psd(k,:),bispPa(k,:,:), bispNo(k,:,:), frequency] = hosAnalysis(samples, M, maxLag, 0);
+    [psd(k,:),bispPa(k,:,:), bispNo(k,:,:), frequency] = hosAnalysis(samples, M, 0);
 end
+
+figure();
+plot(var(psd, 0, 1))
+title("Variance")
+
 
 bispNoVariance = zeros(2*maxLag+1, 2*maxLag+1);
 bispPaVariance = zeros(2*maxLag+1, 2*maxLag+1);
@@ -49,8 +53,8 @@ if display ~= 0
     plot(fshift, psdMean);
     title("Power spectral density cumest");
     
-    figure();
-    plot(var(psd, 0, 1));
+    figure(); 
+    plot(psdVariance);
     title("PSD variance");
 end
 
@@ -64,8 +68,7 @@ if display ~= 0
         abs(bispPaMean(maxLag+1:end,maxLag+1:end)));
         
     figure(); 
-    mesh(frequency(maxLag+1:end), frequency(maxLag+1:end), ...
-        abs(bispPaVariance(maxLag+1:end,maxLag+1:end)));
+    mesh(bispPaVariance);
     title("Bispectrum Parzen variance");
     
     figure();
@@ -77,8 +80,7 @@ if display ~= 0
         abs(bispNoMean(maxLag+1:end, maxLag+1:end)));
     
     figure(); 
-    mesh(frequency(maxLag+1:end), frequency(maxLag+1:end), ...
-        abs(bispNoVariance(maxLag+1:end,maxLag+1:end)));
+    mesh(bispNoVariance);
     title("Bispectrum No window variance");
 end
 
