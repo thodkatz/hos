@@ -1,4 +1,4 @@
-function [powershift, bispPa, bispNo, frequency] = hosAnalysis(samples, M, maxLag, display)    
+function [powershift, bispPa, bispNo, frequency, bispDirect, waxis] = hosAnalysis(samples, M, maxLag, display)    
     % autocorrelation hosa toolbox
     cum2 = cumest(samples, 2, maxLag, 0, 0, 'biased');
     % cumest dont work well with samples seg and unbiased
@@ -109,5 +109,5 @@ function [powershift, bispPa, bispNo, frequency] = hosAnalysis(samples, M, maxLa
     
     % bispectrum direct
     NFFT = M;
-    bispecd(samples, NFFT, -1, M, 0, display);
+    [bispDirect, waxis] = bispecd(samples, NFFT, -1, M, 0, display);
 end
