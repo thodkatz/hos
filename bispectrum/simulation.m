@@ -9,13 +9,15 @@ samples = genSamples(N, display);
 maxLag = 128;
 M = 256;
 
+rng(0);
+
 % repeat for different M = 512 and M = 128
 hosAnalysis(samples, 128, maxLag, 0);
 hosAnalysis(samples, 256, maxLag, 0);
 hosAnalysis(samples, 512, maxLag, 0);
 
 % repeat for 50 realizations and get the mean
-numIter = 10;
+numIter = 4;
 psd = zeros(numIter, 2*maxLag + 1);
 bispPa = zeros(numIter, 2*maxLag + 1, 2*maxLag + 1);
 bispNo = zeros(numIter, 2*maxLag + 1, 2*maxLag + 1);
@@ -23,29 +25,20 @@ bispDirect = zeros(numIter, M, M);
 for k = 1:numIter
     samples = genSamples(N, display);
     [psd(k,:),bispPa(k,:,:), bispNo(k,:,:), frequency, bispDirect(k,:,:), waxis] = ...
-        hosAnalysis(samples, M, maxLag, 0);
+        hosAnalysis(samples, M, maxLag, 1);
 end
 
-bispNoVariance = zeros(2*maxLag+1, 2*maxLag+1);
-bispPaVariance = zeros(2*maxLag+1, 2*maxLag+1);
-bispDirectVariance = zeros(M, M);
-for i = 1:2*maxLag+1
-   for j = 1:2*maxLag+1
-        bispPaVariance(i,j) = var(bispPa(:,i,j));
-        bispNoVariance(i,j) = var(bispNo(:,i,j));
-   end
-end
-
-for i = 1:M
-    for j = 1:M 
-        bispDirectVariance(i,j) = var(bispDirect(:,i,j));
-    end
-end
+bispPaStd = std(abs(bispPa), 0, 1)./mean(abs(bispPa));
+bispNoStd = std(abs(bispNo), 0, 1)./ mean(abs(bispNo));
+bispDirectStd = std(abs(bispDirect), 0, 1) ./ mean(abs(bispDirect));
+bispPaStd = reshape(bispPaStd, 2*maxLag+1, 2*maxLag+1);
+bispNoStd = reshape(bispNoStd, 2*maxLag+1, 2*maxLag+1);
+bispDirectStd = reshape(bispDirectStd, M, M);
 
 psdMean = mean(psd, 1);
-bispPaMean = mean(bispPa, 1);
-bispNoMean = mean(bispNo, 1);
-bispDirectMean = mean(bispDirect, 1);
+bispPaMean = mean(abs(bispPa), 1);
+bispNoMean = mean(abs(bispNo), 1);
+bispDirectMean = mean(abs(bispDirect), 1);
 bispPaMean = reshape(bispPaMean, 2*maxLag+1, 2*maxLag+1);
 bispNoMean = reshape(bispNoMean, 2*maxLag+1, 2*maxLag+1);
 bispDirectMean = reshape(bispDirectMean, M, M);
@@ -62,48 +55,48 @@ if display ~= 0
     
     figure();
     plot(var(psd, 0, 1));
-    title("PSD variance");
+    title("PSD standard deviation");
 end
 
 if display ~= 0
     figure();
     subplot(211);
-    contour(frequency, frequency, abs(bispPaMean));
+    contour(frequency, frequency, bispPaMean, 8);
     title("Bispectrum bisp3cum parzen");
     subplot(212);
     mesh(frequency(maxLag+1:end), frequency(maxLag+1:end), ...
-        abs(bispPaMean(maxLag+1:end,maxLag+1:end)));
+        bispPaMean(maxLag+1:end,maxLag+1:end));
         
     figure(); 
-    mesh(frequency(maxLag+1:end), frequency(maxLag+1:end), ...
-        abs(bispPaVariance(maxLag+1:end,maxLag+1:end)));
-    title("Bispectrum Parzen variance");
+    contour(frequency(maxLag+1:end), frequency(maxLag+1:end), ...
+        bispPaStd(maxLag+1:end,maxLag+1:end),8);
+    title("Bispectrum Parzen coefficient of variation");
     
     figure();
     subplot(211);
-    contour(frequency, frequency, abs(bispNoMean));
+    contour(frequency, frequency, bispNoMean, 8);
     title("Bispectrum bisp3cum no window");
     subplot(212);
     mesh(frequency(maxLag+1:end), frequency(maxLag+1:end), ...
-        abs(bispNoMean(maxLag+1:end, maxLag+1:end)));
+        bispNoMean(maxLag+1:end, maxLag+1:end));
     
     figure(); 
-    mesh(frequency(maxLag+1:end), frequency(maxLag+1:end), ...
-        abs(bispNoVariance(maxLag+1:end,maxLag+1:end)));
-    title("Bispectrum No window variance");
-    
+    contour(frequency(maxLag+1:end), frequency(maxLag+1:end), ...
+        bispNoStd(maxLag+1:end,maxLag+1:end),8);
+    title("Bispectrum No window coefficient of variation");
+   
     figure();
     subplot(211);
-    contour(waxis, waxis, abs(bispDirectMean));
+    contour(waxis, waxis, abs(bispDirectMean), 8);
     title("Bispectrum bisp3cum Direct");
     subplot(212);
     mesh(waxis(M/2:end), waxis(M/2:end), ...
-        abs(bispDirectMean(M/2:end, M/2:end)));
+        bispDirectMean(M/2:end, M/2:end));
     
     figure(); 
-    mesh(waxis(M/2:end), waxis(M/2:end), ...
-        abs(bispDirectVariance(M/2:end,M/2:end)));
-    title("Bispectrum Direct variance");
+    contour(waxis(M/2:end), waxis(M/2:end), ...
+        bispDirectStd(M/2:end,M/2:end),8);
+    title("Bispectrum Direct coefficient of variation");
 end
 
 % if display ~= 0 then display time series sample
@@ -125,7 +118,7 @@ function samples = genSamples(N, display)
     phi(3) = phi(1) + phi(2);
     phi(4) = 2*pi*rand(1, 1);
     phi(5) = 2*pi*rand(1, 1);
-    phi(6) = phi(4) + phi(5);
+    phi(6) = phi(4) + 2*phi(5);
     phis = phi';
 
     % create random signal
