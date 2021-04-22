@@ -68,7 +68,7 @@ function [Bspec,waxis] = bispeci (y,nlag,nsamp, overlap,flag, nfft, wind, displa
 
      overlap  = fix(nsamp * overlap / 100); 
      nadvance = nsamp - overlap; 
-     nrecord  = fix ( (ly*nrecs - overlap) / nadvance ); 
+     nrecord  = fix ( (ly*nrecs - overlap) / nadvance );
 
      c3 = zeros(nlag+1,nlag+1);
      ind = [1:nsamp]';
@@ -138,7 +138,10 @@ end
     if display ~= 0
         figure();
         subplot(211)
-        contour(waxis,waxis,abs(Bspec),8), grid on 
+        hold on;
+        plot(waxis(nlag+1:end), waxis(nlag+1:end), 'color', 'red');
+        contour(waxis(nlag+1:end),waxis(nlag+1:end),abs(Bspec(nlag+1:end,nlag+1:end)),8), grid on 
+        colorbar;
 
         if (wind == -1)
             title('Bispectrum estimated via the indirect method Rect window')
@@ -151,6 +154,7 @@ end
         subplot(212)
         % plot the primary area
         mesh(waxis((nfft-1)/2+1:end),waxis((nfft-1)/2+1:end),abs(Bspec((nfft-1)/2+1:end,(nfft-1)/2+1:end))), grid on
+        colorbar;
         xlabel('f1'), ylabel('f2') 
         set(gcf,'Name','Hosa BISPECI')
     end

@@ -154,12 +154,17 @@ end
        hold off, clf
     %  contour(abs(Bspec),4,waxis,waxis),grid
        subplot(211);
-       contour(waxis,waxis,abs(Bspec),8),grid on 
+       hold on;
+       plot(waxis(nfft/2:end), waxis(nfft/2:end), 'color', 'red');
+       contour(waxis(nfft/2:end),waxis(nfft/2:end), ...
+           abs(Bspec(nfft/2:end, nfft/2:end)),8),grid on 
        title('Bispectrum estimated via the direct (FFT) method')
        xlabel('f1'), ylabel('f2')
        subplot(212);
-       mesh(waxis((nfft)/2:end),waxis((nfft)/2:end),abs(Bspec((nfft)/2:end, (nfft)/2:end))),grid on 
+       mesh(waxis((nfft)/2:end),waxis((nfft)/2:end),...
+           abs(Bspec((nfft)/2:end, (nfft)/2:end))),grid on 
        xlabel('f1'), ylabel('f2')
+       DragDataTip
        set(gcf,'Name','Hosa BISPECD')
    end
 return
