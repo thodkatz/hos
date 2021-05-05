@@ -1,40 +1,58 @@
 clc;
 clear;
-close;
+close all;
 
-% input
-N = 2048;
-v = exprnd(1, [1 N]);
+% samples
+N = 2^11
+snr = -5: 5: 30;
+numIters = 10;
+nrms = zeros(numel(snr), numIters);
 
-% output MA(5)
-q = 5;
-coeff = [1.0 0.93 0.85 0.72 0.59 -0.10];
-x = conv(v, coeff, 'same');
-
-% calculate skewness
-skewness = sum((v - mean(v)).^3)/(N-1)*std(v)^3;
-
-% 3rd order cumulant
-maxLag = 20;
-M = 64;
-nsamp = 2*maxLag + 1;
-cum3 = zeros(nsamp, nsamp);
-for k = -maxLag:maxLag
-  cum3(:,k+maxLag+1) = cumest(x, 3, maxLag, M, 0, 'biased', k);
-end
-mesh(-maxLag:maxLag, -maxLag:maxLag, cum3)
-title("Third order cumulant of output")
-
-% Estimate impulse response with Giannakis formula
-order = [q q-2 q+3]; % include sub and sup estimation
-h_hat = zeros(N,3);
-for i = 1:3
-h_hat(:, i) = [cum3(order(i),maxLag+1:maxLag+1+order(i)) ./ ...
-    cum3(order(i),maxLag+1) zeros(1, N-order(i)-1)];
+for i = 1:numIters
+    fprintf("%d\n", i)
+    nrms(:,i) = per_realization(N,snr);
 end
 
-normal = h_hat(1:order(1) + 1,1)
-sub    = h_hat(1:order(2) + 1,2)
-sup    = h_hat(1:order(3) + 1,3)
+figure
+plot(snr, mean(nrms, 2)')
+xlabel("SNR (dB)")
+ylabel("Average NRMSE")
 
-% Estimate system output with h_hat
+function nrms = per_realization(N, snr)
+    % input
+    v = exprnd(1, [1 N]);
+    v = v - mean(v);
+
+    % calculate skewness
+    skewness = sum((v - mean(v)).^3)/(N-1)*std(v)^3;
+
+    % output MA(5)
+    q = 5;
+    h = [1.0 0.93 0.85 0.72 0.59 -0.10];
+    x = conv(v, h, 'same');
+    %x = x - mean(x);
+
+    % output estimated for three different order and for three different SNRs
+    x_est = zeros(N, 3, numel(snr));
+    rmse = zeros(3, numel(snr));
+    nrms = zeros(3, numel(snr));
+
+    % loop for different snr values
+    display_est = 0;
+    for i = 1:numel(snr)
+        % add gaussian noise
+        noise = awgn(x, snr(i), 'measured');
+        [x_est(:,:,i), rmse(:,i), nrms(:,i)] = estimator(v, noise, q, N, display_est);
+    end
+    
+    % get the rnms for the q order
+    nrms = nrms(1,:);
+    
+    display_snr = 0;
+    if display_snr ~= 0
+        figure
+        plot(snr, nrms)
+        xlabel("SNR (dB)")
+        ylabel("NRMSE")
+    end
+end
