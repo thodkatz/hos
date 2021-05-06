@@ -38,6 +38,23 @@ function [x_est,rmse,nrms] = estimator(v,x,q,N, display)
         hold on
         plot(x_est(:,1), 'color', 'blue')
         plot(x, 'color', 'red')
+        title("Order " + order(1))
+    end
+    
+    if display ~= 0
+        figure
+        hold on
+        plot(x_est(:,2), 'color', 'blue')
+        plot(x, 'color', 'red')
+        title("Order " + order(2))
+    end
+
+    if display ~= 0
+        figure
+        hold on
+        plot(x_est(:,3), 'color', 'blue')
+        plot(x, 'color', 'red')
+        title("Order " + order(3))
     end
     
     % quantification errors
