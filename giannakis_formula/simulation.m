@@ -5,23 +5,21 @@ close all;
 rng(1)
 
 % samples
-N = 2^11
+N = 2^15
 q = 5;
 
-numIters = 100;
-numOrders = 3;
-nrms = zeros(numOrders,numIters);
-for i = 1:numIters
-    fprintf("%d\n",i)
-    [v,x] = create_output(N);
-    [x, y, nrms(:,i)] = estimator(v,x,q,N,0);
-end
+[v,x] = create_output(N);
+[x,y, nrms] = estimator(v,x,q,N,1);
 
-mean(nrms(1,:)) % order 5
-mean(nrms(2,:)) % order 3
-mean(nrms(3,:)) % order 8
+nrms(1)
+nrms(2)
+nrms(3)
 
-multiple_realizations_snr(N, q, numIters)
+snr = -5:5:30;
+per_realization_snr(N, q, snr);
+
+numIters = 50;
+multiple_realizations_snr(N, q, numIters);
 
 function multiple_realizations_snr(N,q,numIters)
     % snr multiple iterations

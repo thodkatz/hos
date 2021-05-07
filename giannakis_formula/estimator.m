@@ -5,7 +5,7 @@ function [x_est,rmse,nrms] = estimator(v,x,q,N, display)
     nsamp = 2*maxLag + 1;
     cum3 = zeros(nsamp, nsamp);
     for k = -maxLag:maxLag
-      cum3(:,k+maxLag+1) = cumest(x, 3, maxLag, M, 0, 'biased', k);
+      cum3(:,k+maxLag+1) = cumest(x, 3, maxLag, M, 0, 'unbiased', k);
     end
     
     if display ~= 0
@@ -36,24 +36,24 @@ function [x_est,rmse,nrms] = estimator(v,x,q,N, display)
     if display ~= 0
         figure
         hold on
-        plot(x_est(:,1), 'color', 'blue')
-        plot(x, 'color', 'red')
+        plot(x_est(:,1), 'color', 'red')
+        plot(x, 'color', 'blue')
         title("Order " + order(1))
     end
     
     if display ~= 0
         figure
         hold on
-        plot(x_est(:,2), 'color', 'blue')
-        plot(x, 'color', 'red')
+        plot(x_est(:,2), 'color', 'red')
+        plot(x, 'color', 'blue')
         title("Order " + order(2))
     end
 
     if display ~= 0
         figure
         hold on
-        plot(x_est(:,3), 'color', 'blue')
-        plot(x, 'color', 'red')
+        plot(x_est(:,3), 'color', 'red')
+        plot(x, 'color', 'blue')
         title("Order " + order(3))
     end
     
