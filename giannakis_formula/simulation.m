@@ -5,7 +5,7 @@ close all;
 rng(1)
 
 % samples
-N = 2^15
+N = 2^11
 q = 5;
 
 [v,x] = create_output(N);
@@ -19,7 +19,7 @@ snr = -5:5:30;
 per_realization_snr(N, q, snr);
 
 numIters = 50;
-multiple_realizations_snr(N, q, numIters);
+%multiple_realizations_snr(N, q, numIters);
 
 function multiple_realizations_snr(N,q,numIters)
     % snr multiple iterations

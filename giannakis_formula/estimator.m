@@ -36,25 +36,28 @@ function [x_est,rmse,nrms] = estimator(v,x,q,N, display)
     if display ~= 0
         figure
         hold on
-        plot(x_est(:,1), 'color', 'red')
-        plot(x, 'color', 'blue')
+        plot(1:N, x_est(:,1), 'color', 'red')
+        plot(1:N, x, 'color', 'blue')
         title("Order " + order(1))
+        axis tight
     end
     
     if display ~= 0
         figure
         hold on
-        plot(x_est(:,2), 'color', 'red')
-        plot(x, 'color', 'blue')
+        plot(1:N, x_est(:,2), 'color', 'red')
+        plot(1:N, x, 'color', 'blue')
         title("Order " + order(2))
+        axis tight
     end
 
     if display ~= 0
         figure
         hold on
-        plot(x_est(:,3), 'color', 'red')
-        plot(x, 'color', 'blue')
+        plot(1:N, x_est(:,3), 'color', 'red')
+        plot(1:N, x, 'color', 'blue')
         title("Order " + order(3))
+        axis tight
     end
     
     % quantification errors
