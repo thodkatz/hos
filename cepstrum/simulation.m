@@ -3,65 +3,100 @@ clear
 close all
 
 % get sound
-[sound,fs] = audioread('a_good_me.wav');
+[sound,fs] = audioread('woman_o.wav');
 sound = sound(:,1); % i don't know why I have two columns
-[row,col] = size(sound); N = row;
-
-% f0 = pitch(sound,fs,'Method','CEP');
-% figure
-% plot(f0)
+[row,col] = size(sound); n = row;
 
 estimatePitch = 0.005;
 
 % start from 2sec for the frame
 % assuming voice lasts over 2 seconds
 Ts = 1/fs;
-t = 0:Ts:(N-1)*Ts;
-periods = 4;
-tStart   = round(2/(Ts));
-tEnd     = round((2 + periods*estimatePitch)/(Ts));
-soundWindow = sound(tStart:tEnd);
-range     = tStart:tEnd;
-N = numel(soundWindow);
+t = 0:Ts:(n-1)*Ts;
+periods = 5;
+startTime = 2;
+startIndex = round(startTime/(Ts));
+endIndex = round((startTime + periods*estimatePitch)/(Ts));
+soundFrame = sound(startIndex:endIndex);
+range = startIndex:endIndex;
+nFrame = numel(soundFrame);
 
 figure
 subplot(2, 2, 1)
-plot(t(1:numel(range))*1000,soundWindow);
+plot(t(1:numel(range))*1000,soundFrame);
 xlabel('Time (ms)'),axis tight
 title('Time signal')
 
-% hamming window
+% hamming Frame
 subplot(2, 2, 3)
-soundWindow = soundWindow .* hamming(N);
-plot(t(1:numel(range))*1000,soundWindow)
-xlabel('Time (ms)'),title('Hamilton window applied'),axis tight
+soundFrame = soundFrame .* hamming(nFrame);
+plot(t(1:numel(range))*1000,soundFrame)
+xlabel('Time (ms)'),title('Hamilton Frame applied'),axis tight
 
 % ceps and reps in full signal
-halfCeps = round(numel(range)/2);
 subplot(2, 2, 2)
-rcep = rceps(sound);
-plot(t(1:halfCeps)*1000,rcep(1:halfCeps))
+rcep = fftshift(rceps(sound));
+tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
+centreIndex = round(numel(rcep)/2);
+centreRange = round(centreIndex-nFrame/2:centreIndex+nFrame/2-1);
+rcep = rcep(centreRange);
+plot(tshift,rcep)
 xlabel('quefrency (ms)'),title('Real cepstrum')
 
 subplot(2, 2, 4)
-rcep = cceps(sound);
-plot(t(1:halfCeps)*1000,rcep(1:halfCeps))
+ccep = fftshift(cceps(sound));
+tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
+centreIndex = round(numel(ccep)/2);
+centreRange = round(centreIndex-nFrame/2:centreIndex+nFrame/2-1);
+ccep = ccep(centreRange);
+plot(tshift,ccep)
 xlabel('quefrency (ms)'),title('Complex cepstrum')
 
-figure
-Y = fftshift(fft(soundWindow));
-fshift = (-N/2:N/2-1)*(fs/N);
-plot(fshift,abs(Y)/N)
+% FFT
+Y = fftshift(fft(soundFrame));
+fshift = (-nFrame/2:nFrame/2-1)*(fs/nFrame);
+figure,plot(fshift,abs(Y)/nFrame)
 xlabel('frequency (Hz)'),title('FFT')
 
-% ceps and reps in frame 
-figure
-subplot(2, 1, 1)
-rcep = rceps(soundWindow);
-plot(t(1:halfCeps)*1000,rcep(1:halfCeps))
-xlabel('quefrency (ms)'),title('Real cepstrum')
+% design filter
+filter = zeros(nFrame,1);
+cutTime = estimatePitch;
+cutIndex = round(cutTime/Ts);
+centreIndex = round(numel(filter)/2);
+centreRange = round(centreIndex-cutIndex:centreIndex+cutIndex);
+filter(centreRange) = 1;
 
-subplot(2, 1, 2)
-rcep = cceps(soundWindow);
-plot(t(1:halfCeps)*1000,rcep(1:halfCeps))
-xlabel('quefrency (ms)'),title('Complex cepstrum')
+% rceps in frame 
+rcepFrame = fftshift(rceps(soundFrame));
+tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
+figure,plot(tshift,rcepFrame)
+xlabel('quefrency (ms)'),title('Real cepstrum Frame')
+
+% cceps in frame
+ccepFrame = fftshift(cceps(soundFrame));
+tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
+figure
+hold on
+plot(tshift,filter);
+plot(tshift,ccepFrame)
+xlabel('quefrency (ms)'),title('Complex cepstrum Frame')
+
+% liftering ccep in frame
+impulseCcepFrame = filter .* ccepFrame;
+inputCcepFrame = ccepFrame - impulseCcepFrame;
+figure
+hold on
+yline(6) % just for scaling
+yline(-6)
+plot(tshift,inputCcepFrame),title('Liftering impulse train')
+figure
+plot(tshift,impulseCcepFrame),title('Liftering impulse response')
+
+% estimate impulse ccep frame signal
+impulseHat = icceps(ifftshift(impulseCcepFrame));
+figure,plot(impulseHat),title('Impulse response estimation')
+inputHat = icceps(ifftshift(inputCcepFrame));
+figure,plot(inputHat),title('Impulse train estimation')
+
+sound = conv(inputHat,impulseHat,'same');
+figure,plot(t(1:numel(range))*1000,sound),title('Time signal estimation')
