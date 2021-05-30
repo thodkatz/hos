@@ -7,56 +7,62 @@ close all
 sound = sound(:,1); % i don't know why I have two columns
 [row,col] = size(sound); n = row;
 
-estimatePitch = 0.005;
+estimatePitch = 0.004;
 
 % start from 2sec for the frame
 % assuming voice lasts over 2 seconds
 Ts = 1/fs;
 t = 0:Ts:(n-1)*Ts;
-periods = 5;
+periods = 4;
 startTime = 2;
 startIndex = round(startTime/(Ts));
 endIndex = round((startTime + periods*estimatePitch)/(Ts));
 soundFrame = sound(startIndex:endIndex);
 range = startIndex:endIndex;
 nFrame = numel(soundFrame);
+tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
 
 figure
-subplot(2, 2, 1)
 plot(t(1:numel(range))*1000,soundFrame);
 xlabel('Time (ms)'),axis tight
 title('Time signal')
 
 % hamming Frame
-subplot(2, 2, 3)
-soundFrame = soundFrame .* hamming(nFrame);
-plot(t(1:numel(range))*1000,soundFrame)
+soundHamming = soundFrame .* hamming(nFrame);
+figure,plot(t(1:numel(range))*1000,soundHamming)
 xlabel('Time (ms)'),title('Hamilton Frame applied'),axis tight
 
-% ceps and reps in full signal
-subplot(2, 2, 2)
-rcep = fftshift(rceps(sound));
-tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
-centreIndex = round(numel(rcep)/2);
-centreRange = round(centreIndex-nFrame/2:centreIndex+nFrame/2-1);
-rcep = rcep(centreRange);
-plot(tshift,rcep)
-xlabel('quefrency (ms)'),title('Real cepstrum')
+% cepstrum with hamming
+soundCcepsHamming = fftshift(cceps(soundHamming));
+plot(tshift,soundCcepsHamming),axis tight,title('Complex cepstrum with hamming')
 
-subplot(2, 2, 4)
-ccep = fftshift(cceps(sound));
-tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
-centreIndex = round(numel(ccep)/2);
-centreRange = round(centreIndex-nFrame/2:centreIndex+nFrame/2-1);
-ccep = ccep(centreRange);
-plot(tshift,ccep)
-xlabel('quefrency (ms)'),title('Complex cepstrum')
+% cpestrum without hamming
+soundCcepsFrame = fftshift(cceps(soundFrame));
+figure,plot(tshift,soundCcepsFrame),axis tight,title('Complex cepstrum without hamming')
 
-% FFT
-Y = fftshift(fft(soundFrame));
-fshift = (-nFrame/2:nFrame/2-1)*(fs/nFrame);
-figure,plot(fshift,abs(Y)/nFrame)
-xlabel('frequency (Hz)'),title('FFT')
+% spot peak to estimate pitch
+% real spectrum is a better tool for pitch estimation
+soundRcepsHamming = fftshift(rceps(soundHamming));
+figure,plot(tshift,soundRcepsHamming),axis tight,title('Real cepstrum with hamming')
+
+% real spectrum without hamming
+soundRcepsFrame = fftshift(rceps(soundFrame));
+figure,plot(tshift,soundRcepsFrame),axis tight,title('Real cepstrum without hamming')
+
+% spot pitch based on autocorr
+acf = autocorr(soundHamming,numel(soundHamming)-1);
+figure,plot(t(1:numel(range)),acf)
+[pks,locs] = findpeaks(acf);
+[max,index] = max(pks);
+estimatePitch = locs(index)*Ts;
+
+% deconvolution with hamming 
+impulseResponse = icceps(ifftshift(soundCcepsHamming)) ./ hamming(nFrame);
+figure,plot(t(1:numel(range)),impulseResponse),axis tight,title('Sanity check icceps time signal with hamming')
+
+% deconvolution without hamming
+impulseResponse = icceps(ifftshift(soundCcepsFrame));
+figure,plot(t(1:numel(range)),impulseResponse),axis tight,title('Sanity check icceps time signal no hamming')
 
 % design filter
 filter = zeros(nFrame,1);
@@ -66,37 +72,24 @@ centreIndex = round(numel(filter)/2);
 centreRange = round(centreIndex-cutIndex:centreIndex+cutIndex);
 filter(centreRange) = 1;
 
-% rceps in frame 
-rcepFrame = fftshift(rceps(soundFrame));
-tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
-figure,plot(tshift,rcepFrame)
-xlabel('quefrency (ms)'),title('Real cepstrum Frame')
+% liftering with hamming
+soundCcepsHamming = filter .* soundCcepsHamming;
+figure,plot(tshift,soundCcepsHamming),title('Liftering with hamming')
+impulseResponse = (icceps(ifftshift(soundCcepsHamming))) ./ hamming(nFrame);
+cutIndex = round(estimatePitch/Ts);
+figure,plot(t(1:cutIndex)*1000,impulseResponse(1:cutIndex)),title('Impulse response after liftering hamming')
 
-% cceps in frame
-ccepFrame = fftshift(cceps(soundFrame));
-tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
-figure
-hold on
-plot(tshift,filter);
-plot(tshift,ccepFrame)
-xlabel('quefrency (ms)'),title('Complex cepstrum Frame')
+% liftering without hamming
+% soundCcepsFrame = filter .* soundCcepsFrame;
+% figure,plot(tshift,soundCcepsFrame),title('Liftering no hamming')
+% impulseResponse = (icceps(ifftshift(soundCcepsFrame)));
+% cutIndex = round(estimatePitch/Ts);
+% figure,plot(t(1:cutIndex)*1000,impulseResponse(1:cutIndex)),title('Impulse response after liftering no hamming')
 
-% liftering ccep in frame
-impulseCcepFrame = filter .* ccepFrame;
-inputCcepFrame = ccepFrame - impulseCcepFrame;
-figure
-hold on
-yline(6) % just for scaling
-yline(-6)
-plot(tshift,inputCcepFrame),title('Liftering impulse train')
-figure
-plot(tshift,impulseCcepFrame),title('Liftering impulse response')
-
-% estimate impulse ccep frame signal
-impulseHat = icceps(ifftshift(impulseCcepFrame));
-figure,plot(impulseHat),title('Impulse response estimation')
-inputHat = icceps(ifftshift(inputCcepFrame));
-figure,plot(inputHat),title('Impulse train estimation')
-
-sound = conv(inputHat,impulseHat,'same');
-figure,plot(t(1:numel(range))*1000,sound),title('Time signal estimation')
+% reconstructing output
+impulseResponse = impulseResponse(1:cutIndex);
+impulseTrain = zeros(periods*numel(impulseResponse)+periods,1);
+impulseTrain(1:numel(impulseResponse):end) = 1;
+figure,plot(t(1:numel(impulseTrain)),impulseTrain)
+soundFrameEst = conv(impulseResponse,impulseTrain);
+figure,plot(t(1:numel(soundFrameEst))*1000,soundFrameEst);
