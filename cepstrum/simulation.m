@@ -22,10 +22,11 @@ range = startIndex:endIndex;
 nFrame = numel(soundFrame);
 tshift = (-nFrame/2:nFrame/2-1)*(Ts)*1000;
 
-figure
-plot(t(1:numel(range))*1000,soundFrame);
-xlabel('Time (ms)'),axis tight
-title('Time signal')
+% FFT
+Y = fftshift(fft(soundFrame));
+fshift = (-nFrame/2:nFrame/2-1)*(fs/nFrame);
+figure,plot(fshift,abs(Y)/nFrame)
+xlabel('frequency (Hz)'),title('FFT')
 
 figure
 subplot(2,2,1),plot(t(1:numel(range))*1000,soundFrame);
@@ -47,17 +48,13 @@ filter(centreRange) = 1;
 
 % spot peak to estimate pitch
 % real spectrum is a better tool for pitch estimation
+
+% real cepstrum with hamming
 soundRcepsHamming = fftshift(rceps(soundHamming));
 subplot(2,2,[2 4]),plot(tshift,soundRcepsHamming),axis tight
 title('Real cepstrum')
 
-% FFT
-Y = fftshift(fft(soundFrame));
-fshift = (-nFrame/2:nFrame/2-1)*(fs/nFrame);
-figure,plot(fshift,abs(Y)/nFrame)
-xlabel('frequency (Hz)'),title('FFT')
-
-% real spectrum without hamming
+% real cepstrum without hamming
 soundRcepsFrame = fftshift(rceps(soundFrame));
 figure,plot(tshift,soundRcepsFrame),axis tight
 title('Real cepstrum without hamming')
@@ -71,7 +68,7 @@ estimatePitch = locs(index)*Ts;
 
 % cepstrum with hamming
 soundCcepsHamming = fftshift(cceps(soundHamming));
-figure,plot(tshift,soundCcepsHamming)
+figure,plot(tshift,soundCcepsHamming),xlabel('quefrency (ms)')
 hold on
 plot(tshift,filter),axis tight,title('Complex cepstrum')
 
